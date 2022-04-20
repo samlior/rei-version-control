@@ -2,7 +2,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 import readLine = require("readline");
 const replaceFile ='package.json';
-const  ignoreFile = 'node_modules'
+const  ignoreFile = 'node_modules';
+let  updateLibrary ='';
+let  updateLibrayVersion ='';
 // const replaceFile ='hello.txt';
 // 读取文件
 function fsReadDir(dir: string) {
