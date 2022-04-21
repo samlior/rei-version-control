@@ -1,20 +1,20 @@
 import * as fs from 'fs';
+import * as fsp from 'fs/promises';
 import * as path from 'path';
-import readLine = require("readline");
-const replaceFile ='package.json';
+const  replaceFile = 'package.json';
 const  ignoreFile = 'node_modules';
-let  updateLibrary ='';
-let  updateLibrayVersion ='';
-// const replaceFile ='hello.txt';
+let  libiraryOldVersion = '';
+let  updatedLibrayVersion = '';
+let updatedMp = new Map();
 // 读取文件
-function fsReadDir(dir: string) {
-    return new Promise<string[]>((resolve, reject) => {
-        fs.readdir(dir, (err, files) => {
-            if (err) reject(err);
-            resolve(files);
-        });
-    });
-}
+// function fsReadDir(dir: string) {
+//     return new Promise<string[]>((resolve, reject) => {
+//         fs.readdir(dir, (err, files) => {
+//             if (err) reject(err);
+//             resolve(files);
+//         });
+//     });
+// }
 // 获取stat
 function fsStat(path: string) {
     return new Promise<fs.Stats>((resolve, reject) => {
@@ -26,7 +26,8 @@ function fsStat(path: string) {
 }
 // 搜索文件
 export async function fileSearch(dirPath: string,opts: { [option: string]: string }) {
-    const files = await fsReadDir(dirPath);
+    let files = await fsp.readdir(dirPath)
+    // const files = await fsReadDir(dirPath);
     const promises = files.map(file => {
         return fsStat(path.join(dirPath, file));
     });
@@ -44,40 +45,80 @@ export async function fileSearch(dirPath: string,opts: { [option: string]: strin
         }
         if (isFile) {
             if (pathArr[pathArr.length-1] == replaceFile){
-                replace(datas.files[datas.stats.indexOf(stat)],opts)
+                // console.log("发现需要变更的文件",datas.files[datas.stats.indexOf(stat)])
+                updateLibraryVersionPlus(datas.files[datas.stats.indexOf(stat)],opts)
             }
         }
     });
 }
-function replace(fileName: string,opts: { [option: string]: string }) {
-    let arr: string[] = [];
-    let readObj = readLine.createInterface({
-        input: fs.createReadStream(fileName)
-    });
-    // 按行读取文件
-    readObj.on('line', function (line) {
-        arr.push(line);
-    });
-    readObj.on('close', function () {
-        let tempArr: string[] = [];
-        arr.forEach((ele: string,index:number) => {
-            // console.log("file: ",String(ele).split(":")[0].trim());
-            // console.log("changeFile: ",('"'+ String(opts.library) + '"'));
-            // console.log("true/false:",String(ele).split(":")[0] == ('"'+ String(opts.library) + '"'));
-            if (String(ele).split(":")[0].trim() == ('"'+ String(opts.library) + '"')){
-                let line = ele.split(":")[0] + ': "' + opts.newVersion +'"'
-                if (arr[index+1].trim() != '}' && arr[index+1].trim() != '},'){
-                    line = line + ","
-                }
-                tempArr.push(line);
-                console.log("变更文件: ",fileName,"  history version: ",String(ele).split(":")[1].trim(),"  current version: ",opts.newVersion);
-            }else {
-                tempArr.push(ele);
+//变更package.json
+function updateLibraryVersionPlus(fileName: string,opts: { [option: string]: string }){
+    if (!updatedMp.has(fileName)){//更新完的文件第二轮将不再打开
+        fs.readFile(fileName.trim(),'utf-8',(err,data)=>{
+            if (err){
+                throw  err;
             }
-        });
-        fs.writeFile(fileName, tempArr.join("\n"),
-            function (err) {
-                if (err) throw err;
-            });
-    });
+            // console.log("file:",fileName);
+            // console.log("data: ",data.toString());
+            let p = JSON.parse(data.toString());
+            let historyVersion = p.version;
+            if (p.name == opts.library && updatedLibrayVersion == ''){
+                let versionArr = p.version.split(".");
+                //历史版本保存下来用于日志打印
+                libiraryOldVersion = p.version
+                switch (opts.version){
+                    case 'major':
+                        versionArr[0] = Number(versionArr[0]) + 1;
+                        versionArr[1] = 0
+                        versionArr[2] = 0
+                        break;
+                    case 'minor':
+                        versionArr[1] = Number(versionArr[1]) + 1;
+                        versionArr[2] = 0
+                        break;
+                    case 'patch':
+                        versionArr[2] = Number(versionArr[2]) + 1;
+                        break;
+                }
+                p.version = versionArr.join('.');
+                //把变更后的版本记录下来,后续根据保存的数据变更使用到该模块的模块的package.json
+                updatedLibrayVersion = p.version;
+                console.log("updated file: ",fileName,"  history version: ",historyVersion,"  current version: ",updatedLibrayVersion);
+                updatedMp.set(fileName,1);
+                //在需要更新版本的模块更新完毕后才开始更新使用到该模块的模块
+            } else if (p.dependencies != undefined){
+                if (p.dependencies[opts.library] != undefined && updatedLibrayVersion != ''){
+                    if (p.dependencies[opts.library].includes('^') || p.dependencies[opts.library].includes('~')){
+                        p.dependencies[opts.library] = p.dependencies[opts.library][0] + updatedLibrayVersion;
+                    }else {
+                        p.dependencies[opts.library] = updatedLibrayVersion;
+                    }
+                    let versionArr = p.version.split('.');
+                    switch (opts.version){
+                        case 'major':
+                            versionArr[0] = Number(versionArr[0]) + 1;
+                            versionArr[1] = 0
+                            versionArr[2] = 0
+                            break;
+                        case 'minor':
+                            versionArr[1] = Number(versionArr[1]) + 1;
+                            versionArr[2] = 0
+                            break;
+                        case 'patch':
+                            versionArr[2] = Number(versionArr[2]) + 1;
+                            break;
+                    }
+                    p.version = versionArr.join('.');
+                    console.log("updated file: ",fileName,"  history version: ",historyVersion,"  current version: ",p.version);
+                    updatedMp.set(fileName,1);
+                }
+            }
+            let str = JSON.stringify(p,null,'\t');
+            fs.writeFile(fileName,str,function(err){
+                if(err){
+                    console.error(err);
+                }
+            })
+        })
+    }
 }
