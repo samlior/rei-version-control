@@ -21,7 +21,7 @@ export function needUpdateLibrary(librarys: []) {
     }
 }
 
-export async function updatePackageJson(opts: { [option: string]: string }) {
+export async function updatePackageJson(version: string,library: string) {
     // console.log("myLibraryMp", myLibraryMp);
     for (const [key, value] of myLibraryMp) {
         const data = await fs.readFileSync(key);
@@ -32,7 +32,7 @@ export async function updatePackageJson(opts: { [option: string]: string }) {
                 tmp = 1;
                 let dependenciesVersionArr = p.dependencies[value[i]].split('.')
                 //变更依赖版本
-                switch (opts.version) {
+                switch (version) {
                     case 'major':
                         if (p.dependencies[value[i]].includes('^') || p.dependencies[value[i]].includes('~')) {
                             dependenciesVersionArr[0] = p.dependencies[value[i]][0] + (Number(p.dependencies[value[i]][1]) + 1);
@@ -53,11 +53,11 @@ export async function updatePackageJson(opts: { [option: string]: string }) {
                 p.dependencies[value[i]] = dependenciesVersionArr.join('.');
             }
         }
-        if (tmp === 1 || p.name === opts.library) {
+        if (tmp === 1 || p.name === library) {
             const historyVersion = p.version
             let versionArr = p.version.split('.');
             //变更模块版本
-            switch (opts.version) {
+            switch (version) {
                 case 'major':
                     versionArr[0] = Number(versionArr[0]) + 1;
                     versionArr[1] = 0
@@ -79,7 +79,7 @@ export async function updatePackageJson(opts: { [option: string]: string }) {
     }
 }
 
-export async function UpdaeDependencies(dirPath: string, opts: { [option: string]: string }) {
+export async function UpdaeDependencies(dirPath: string) {
     const files = await fsp.readdir(dirPath)
     // const files = await fsReadDir(dirPath);
     const promises = files.map(file => {
@@ -96,7 +96,7 @@ export async function UpdaeDependencies(dirPath: string, opts: { [option: string
         const pathArr = datas.files[i].split(path.sep);
         //如果是文件夹并且不是node_modules就继续递归文件夹
         if (isDir && pathArr[pathArr.length - 1] !== ignoreFile) {
-            await UpdaeDependencies(datas.files[i], opts);
+            await UpdaeDependencies(datas.files[i]);
         }
         if (isFile) {
             if (pathArr[pathArr.length - 1] === replaceFile) {
