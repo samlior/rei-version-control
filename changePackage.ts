@@ -4,18 +4,12 @@ import * as path from 'path';
 
 const replaceFile = 'package.json';
 const ignoreFile = 'node_modules';
-let libiraryOldVersion = '';
-let updatedLibrayVersion = '';
-let updatedMp = new Map();
-// 读取文件
-// function fsReadDir(dir: string) {
-//     return new Promise<string[]>((resolve, reject) => {
-//         fs.readdir(dir, (err, files) => {
-//             if (err) reject(err);
-//             resolve(files);
-//         });
-//     });
-// }
+//存储每个库被哪些库引用
+export let packagesDependenciesMp = new Map();
+//存储需要变更的库
+export let needUpdateLibraryMp = new Map();
+//我使用了哪些库
+let myLibraryMp = new Map();
 // 获取stat
 function fsStat(path: string) {
     return new Promise<fs.Stats>((resolve, reject) => {
@@ -25,14 +19,6 @@ function fsStat(path: string) {
         });
     });
 }
-
-//存储每个库被哪些库引用
-export let packagesDependenciesMp = new Map();
-//存储需要变更的库
-export let needUpdateLibraryMp = new Map();
-//我使用了哪些库
-let myLibraryMp = new Map();
-// let packagesMp = new Map();
 
 //统计出需要变更的package
 export function needUpdateLibrary(librarys: []) {
@@ -133,14 +119,6 @@ export async function UpdaeDependencies(dirPath: string, opts: { [option: string
             }
         }
     }
-
-    // console.log("统计完成------------------packetMp", packagesDependenciesMp);
-    // //统计出哪些库需要变更
-    // needUpdateLibraryMp.set(opts.library, 1);
-    // await needUpdateLibrary(packagesDependenciesMp.get(opts.library))
-    // //变更package.json
-    // await updatePackageJson(opts)
-
 }
 
 function searchRelyOn(fileName: string) {
