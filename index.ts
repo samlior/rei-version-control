@@ -7,7 +7,6 @@ import {UpdaeDependencies,needUpdateLibraryMp,packagesDependenciesMp,needUpdateL
 getParam(program);
 program.parse(process.argv);
 const options = program.opts();
-//两轮变更
 let update = async function () {
     //统计依赖关系
     await UpdaeDependencies(String(options.projectPath),options);
@@ -18,7 +17,6 @@ let update = async function () {
     // console.log("需要变更的库:",needUpdateLibraryMp)
     //每个文件的依赖 和 需要变更的依赖 二者取交集来变更package.json
     await updatePackageJson(options)
-    // updateLibrary(options)
 }
 update();
 

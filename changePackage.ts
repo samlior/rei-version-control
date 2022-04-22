@@ -10,19 +10,10 @@ export let packagesDependenciesMp = new Map();
 export let needUpdateLibraryMp = new Map();
 //我使用了哪些库
 let myLibraryMp = new Map();
-// 获取stat
-function fsStat(path: string) {
-    return new Promise<fs.Stats>((resolve, reject) => {
-        fs.stat(path, (err, stat) => {
-            if (err) reject(err);
-            resolve(stat);
-        });
-    });
-}
 
 //统计出需要变更的package
 export function needUpdateLibrary(librarys: []) {
-    for (let index in librarys) {
+    for (const index in librarys) {
         needUpdateLibraryMp.set(librarys[index], 1);
         if (packagesDependenciesMp.has(librarys[index])) {
             needUpdateLibrary(packagesDependenciesMp.get(librarys[index]))
@@ -30,12 +21,12 @@ export function needUpdateLibrary(librarys: []) {
     }
 }
 
-export function updatePackageJson(opts: { [option: string]: string }) {
+export async function updatePackageJson(opts: { [option: string]: string }) {
     // console.log("myLibraryMp", myLibraryMp);
-    for (var [key, value] of myLibraryMp) {
-        let data = fs.readFileSync(key);
+    for (const [key, value] of myLibraryMp) {
+        const data = await fs.readFileSync(key);
         let p = JSON.parse(data.toString());
-        let tmp = 0;
+        let tmp = 0;//标记依赖是否被变更过,变更过则变更模块版本
         for (let i = 0; i < value.length; i++) {
             if (needUpdateLibraryMp.has(value[i])) {
                 tmp = 1;
@@ -43,7 +34,6 @@ export function updatePackageJson(opts: { [option: string]: string }) {
                 //变更依赖版本
                 switch (opts.version) {
                     case 'major':
-                        //变更依赖版本
                         if (p.dependencies[value[i]].includes('^') || p.dependencies[value[i]].includes('~')) {
                             dependenciesVersionArr[0] = p.dependencies[value[i]][0] + (Number(p.dependencies[value[i]][1]) + 1);
                         } else {
@@ -63,12 +53,12 @@ export function updatePackageJson(opts: { [option: string]: string }) {
                 p.dependencies[value[i]] = dependenciesVersionArr.join('.');
             }
         }
-        if (tmp == 1 || p.name == opts.library) {
+        if (tmp === 1 || p.name === opts.library) {
             let historyVersion = p.version
             let versionArr = p.version.split('.');
+            //变更模块版本
             switch (opts.version) {
                 case 'major':
-                    //变更主版本
                     versionArr[0] = Number(versionArr[0]) + 1;
                     versionArr[1] = 0
                     versionArr[2] = 0
@@ -84,13 +74,8 @@ export function updatePackageJson(opts: { [option: string]: string }) {
             p.version = versionArr.join('.');
             console.log("updated package.json: ", key, "history version:", historyVersion, "current version:", p.version);
         }
-        let str = JSON.stringify(p, null, '\t');
-        fs.writeFile(key, str, function (err) {
-                if (err) {
-                    console.error(err);
-                }
-            }
-        )
+        const str = JSON.stringify(p, null, '\t');
+        await fsp.writeFile(key, str);
     }
 }
 
@@ -98,7 +83,8 @@ export async function UpdaeDependencies(dirPath: string, opts: { [option: string
     let files = await fsp.readdir(dirPath)
     // const files = await fsReadDir(dirPath);
     const promises = files.map(file => {
-        return fsStat(path.join(dirPath, file));
+        // return fsStat(path.join(dirPath, file));
+        return fsp.stat(path.join(dirPath, file));
     });
     const datas = await Promise.all(promises).then(stats => {
         for (let i = 0; i < files.length; i += 1) files[i] = path.join(dirPath, files[i]);
@@ -113,7 +99,7 @@ export async function UpdaeDependencies(dirPath: string, opts: { [option: string
             await UpdaeDependencies(datas.files[datas.stats.indexOf(datas.stats[i])], opts);
         }
         if (isFile) {
-            if (pathArr[pathArr.length - 1] == replaceFile) {
+            if (pathArr[pathArr.length - 1] === replaceFile) {
                 // packagesMp.set(datas.files[datas.stats.indexOf((datas.stats[i]))],[])
                 await searchRelyOn(datas.files[datas.stats.indexOf(datas.stats[i])])
             }
@@ -121,37 +107,28 @@ export async function UpdaeDependencies(dirPath: string, opts: { [option: string
     }
 }
 
-function searchRelyOn(fileName: string) {
-    fs.readFile(fileName.trim(), 'utf-8', (err, data) => {
-        if (err) {
-            throw  err;
-        }
-        // console.log("file:",fileName);
-        // console.log("data: ",data.toString());
-        let p = JSON.parse(data.toString());
-        if (p.dependencies != undefined) {
-            for (let library in p.dependencies) {
-                if (!packagesDependenciesMp.has(library)) {
-                    packagesDependenciesMp.set(library, []);
-                }
-                ;
-                //统计出每个库被哪些其他库引用
-                packagesDependenciesMp.get(library).push(p.name);
-                //统计出自己使用了哪些库
-                if (!myLibraryMp.has(fileName)) {
-                    myLibraryMp.set(fileName, []);
-                }
-                ;
-
-                myLibraryMp.get(fileName).push(library);
+async function searchRelyOn(fileName: string) {
+    const data = await fsp.readFile(fileName.trim(), 'utf-8');
+    // console.log("file:",fileName);
+    // console.log("data: ",data.toString());
+    let p = JSON.parse(data.toString());
+    if (p.dependencies != undefined) {
+        for (const library in p.dependencies) {
+            if (!packagesDependenciesMp.has(library)) {
+                packagesDependenciesMp.set(library, []);
             }
-        }
-        let str = JSON.stringify(p, null, '\t');
-        fs.writeFile(fileName, str, function (err) {
-            if (err) {
-                console.error(err);
+            ;
+            //统计出每个库被哪些其他库引用
+            packagesDependenciesMp.get(library).push(p.name);
+            //统计出自己使用了哪些库
+            if (!myLibraryMp.has(fileName)) {
+                myLibraryMp.set(fileName, []);
             }
-        })
-    })
+            ;
+            myLibraryMp.get(fileName).push(library);
+        }
+    }
+    const str = JSON.stringify(p, null, '\t');
+    return await fsp.writeFile(fileName, str);
 }
 
