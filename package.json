@@ -3,8 +3,12 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.ts",
+  "bin": {
+    "rei-version-control": "dist/index.js"
+  },
   "scripts": {
-    "start": "ts-node index.ts"
+    "start": "ts-node index.ts",
+    "build": "tsc --build tsconfig.json"
   },
   "author": "",
   "license": "ISC",
