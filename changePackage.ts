@@ -54,7 +54,7 @@ export async function updatePackageJson(opts: { [option: string]: string }) {
             }
         }
         if (tmp === 1 || p.name === opts.library) {
-            let historyVersion = p.version
+            const historyVersion = p.version
             let versionArr = p.version.split('.');
             //变更模块版本
             switch (opts.version) {
@@ -72,15 +72,15 @@ export async function updatePackageJson(opts: { [option: string]: string }) {
                     break;
             }
             p.version = versionArr.join('.');
+            const str = JSON.stringify(p, null, '\t');
+            await fsp.writeFile(key, str);
             console.log("updated package.json: ", key, "history version:", historyVersion, "current version:", p.version);
         }
-        const str = JSON.stringify(p, null, '\t');
-        await fsp.writeFile(key, str);
     }
 }
 
 export async function UpdaeDependencies(dirPath: string, opts: { [option: string]: string }) {
-    let files = await fsp.readdir(dirPath)
+    const files = await fsp.readdir(dirPath)
     // const files = await fsReadDir(dirPath);
     const promises = files.map(file => {
         // return fsStat(path.join(dirPath, file));
@@ -93,15 +93,15 @@ export async function UpdaeDependencies(dirPath: string, opts: { [option: string
     for (let i = 0; i < datas.stats.length; i++) {
         const isFile = datas.stats[i].isFile();
         const isDir = datas.stats[i].isDirectory();
-        let pathArr = datas.files[datas.stats.indexOf(datas.stats[i])].split("/");
+        const pathArr = datas.files[i].split(path.sep);
         //如果是文件夹并且不是node_modules就继续递归文件夹
-        if (isDir && pathArr[pathArr.length - 1] != ignoreFile) {
-            await UpdaeDependencies(datas.files[datas.stats.indexOf(datas.stats[i])], opts);
+        if (isDir && pathArr[pathArr.length - 1] !== ignoreFile) {
+            await UpdaeDependencies(datas.files[i], opts);
         }
         if (isFile) {
             if (pathArr[pathArr.length - 1] === replaceFile) {
                 // packagesMp.set(datas.files[datas.stats.indexOf((datas.stats[i]))],[])
-                await searchRelyOn(datas.files[datas.stats.indexOf(datas.stats[i])])
+                await searchRelyOn(datas.files[i])
             }
         }
     }
@@ -111,7 +111,7 @@ async function searchRelyOn(fileName: string) {
     const data = await fsp.readFile(fileName.trim(), 'utf-8');
     // console.log("file:",fileName);
     // console.log("data: ",data.toString());
-    let p = JSON.parse(data.toString());
+    const p = JSON.parse(data.toString());
     if (p.dependencies != undefined) {
         for (const library in p.dependencies) {
             if (!packagesDependenciesMp.has(library)) {
@@ -128,7 +128,5 @@ async function searchRelyOn(fileName: string) {
             myLibraryMp.get(fileName).push(library);
         }
     }
-    const str = JSON.stringify(p, null, '\t');
-    return await fsp.writeFile(fileName, str);
 }
 
