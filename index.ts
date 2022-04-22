@@ -11,7 +11,6 @@ import {
 
 getParam(program);
 program.parse(process.argv);
-const options = program.opts();
 const path = program.opts().projectPath;
 const version = program.opts().version;
 const library = program.opts().library;
@@ -20,8 +19,8 @@ let update = async function () {
     await UpdaeDependencies(path);
     // console.log("统计完成------------------packetMp", packagesDependenciesMp);
     //统计需要变更的依赖
-    needUpdateLibraryMp.set(options.library, 1);
-    await needUpdateLibrary(packagesDependenciesMp.get(options.library))
+    needUpdateLibraryMp.set(library, 1);
+    await needUpdateLibrary(packagesDependenciesMp.get(library))
     // console.log("需要变更的库:",needUpdateLibraryMp)
     //每个文件的依赖 和 需要变更的依赖 二者取交集来变更package.json
     await updatePackageJson(version, library)
