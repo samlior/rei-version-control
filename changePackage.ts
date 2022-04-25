@@ -4,12 +4,18 @@ import * as path from 'path';
 
 const replaceFile = 'package.json';
 const ignoreFile = 'node_modules';
+export const majorVersion = 'major';
+export const minorVersion = 'minor';
+export const patchVersion = 'patch';
+export const majorVersionIndex = 0;
+export const minorVersionIndex = 1;
+export const patchVersionIndex = 2;
 //存储每个库被哪些库引用
 export let packagesDependenciesMp = new Map();
 //存储需要变更的库
 export let needUpdateLibraryMp = new Map();
 //我使用了哪些库
-let myLibraryMp = new Map();
+export let myLibraryMp = new Map();
 
 //统计出需要变更的package
 export function needUpdateLibrary(librarys: []) {
@@ -21,7 +27,7 @@ export function needUpdateLibrary(librarys: []) {
     }
 }
 
-export async function updatePackageJson(version: string,library: string) {
+export async function updatePackageJson(version: string, library: string) {
     // console.log("myLibraryMp", myLibraryMp);
     for (const [key, value] of myLibraryMp) {
         const data = await fs.readFileSync(key);
@@ -33,21 +39,21 @@ export async function updatePackageJson(version: string,library: string) {
                 let dependenciesVersionArr = p.dependencies[value[i]].split('.')
                 //变更依赖版本
                 switch (version) {
-                    case 'major':
+                    case majorVersion:
                         if (p.dependencies[value[i]].includes('^') || p.dependencies[value[i]].includes('~')) {
-                            dependenciesVersionArr[0] = p.dependencies[value[i]][0] + (Number(p.dependencies[value[i]][1]) + 1);
+                            dependenciesVersionArr[majorVersionIndex] = p.dependencies[value[i]][0] + (Number(p.dependencies[value[i]][1]) + 1);
                         } else {
-                            dependenciesVersionArr[0] = Number(dependenciesVersionArr[0]) + 1;
+                            dependenciesVersionArr[majorVersionIndex] = Number(dependenciesVersionArr[majorVersionIndex]) + 1;
                         }
-                        dependenciesVersionArr[1] = 0;
-                        dependenciesVersionArr[2] = 0
+                        dependenciesVersionArr[minorVersionIndex] = 0;
+                        dependenciesVersionArr[patchVersionIndex] = 0
                         break;
-                    case 'minor':
-                        dependenciesVersionArr[1] = Number(dependenciesVersionArr[1]) + 1;
-                        dependenciesVersionArr[2] = 0
+                    case minorVersion:
+                        dependenciesVersionArr[minorVersionIndex] = Number(dependenciesVersionArr[minorVersionIndex]) + 1;
+                        dependenciesVersionArr[patchVersionIndex] = 0
                         break;
-                    case 'patch':
-                        dependenciesVersionArr[2] = Number(dependenciesVersionArr[2]) + 1
+                    case patchVersion:
+                        dependenciesVersionArr[patchVersionIndex] = Number(dependenciesVersionArr[patchVersionIndex]) + 1
                         break;
                 }
                 p.dependencies[value[i]] = dependenciesVersionArr.join('.');
@@ -58,17 +64,17 @@ export async function updatePackageJson(version: string,library: string) {
             let versionArr = p.version.split('.');
             //变更模块版本
             switch (version) {
-                case 'major':
-                    versionArr[0] = Number(versionArr[0]) + 1;
-                    versionArr[1] = 0
-                    versionArr[2] = 0
+                case majorVersion:
+                    versionArr[majorVersionIndex] = Number(versionArr[majorVersionIndex]) + 1;
+                    versionArr[minorVersionIndex] = 0
+                    versionArr[patchVersionIndex] = 0
                     break;
-                case 'minor':
-                    versionArr[1] = Number(versionArr[1]) + 1;
-                    versionArr[2] = 0
+                case minorVersion:
+                    versionArr[minorVersionIndex] = Number(versionArr[minorVersionIndex]) + 1;
+                    versionArr[patchVersionIndex] = 0
                     break;
-                case 'patch':
-                    versionArr[2] = Number(versionArr[2]) + 1;
+                case patchVersion:
+                    versionArr[patchVersionIndex] = Number(versionArr[2]) + 1;
                     break;
             }
             p.version = versionArr.join('.');
@@ -79,11 +85,10 @@ export async function updatePackageJson(version: string,library: string) {
     }
 }
 
-export async function UpdaeDependencies(dirPath: string) {
+export async function updaeDependencies(dirPath: string) {
     const files = await fsp.readdir(dirPath)
     // const files = await fsReadDir(dirPath);
     const promises = files.map(file => {
-        // return fsStat(path.join(dirPath, file));
         return fsp.stat(path.join(dirPath, file));
     });
     const datas = await Promise.all(promises).then(stats => {
@@ -96,11 +101,10 @@ export async function UpdaeDependencies(dirPath: string) {
         const pathArr = datas.files[i].split(path.sep);
         //如果是文件夹并且不是node_modules就继续递归文件夹
         if (isDir && pathArr[pathArr.length - 1] !== ignoreFile) {
-            await UpdaeDependencies(datas.files[i]);
+            await updaeDependencies(datas.files[i]);
         }
         if (isFile) {
             if (pathArr[pathArr.length - 1] === replaceFile) {
-                // packagesMp.set(datas.files[datas.stats.indexOf((datas.stats[i]))],[])
                 await searchRelyOn(datas.files[i])
             }
         }
