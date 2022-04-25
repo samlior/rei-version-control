@@ -20,13 +20,6 @@ const updateLibrary = '@rei-network/utils';
 const test01 = 'test' + path.sep + 'packageJson-test' + path.sep + 'test01' + path.sep + 'package.json';
 const test02 = 'test' + path.sep + 'packageJson-test' + path.sep + 'test02' + path.sep + 'package.json';
 const test03 = 'test' + path.sep + 'packageJson-test' + path.sep + 'test03' + path.sep + 'package.json';
-//历史version保存
-// const historyData1 = fs.readFileSync(test01)
-// const historyData2 = fs.readFileSync(test02)
-// const historyData3 = fs.readFileSync(test03)
-// const historyP1 = JSON.parse(historyData1.toString());
-// const historyP2 = JSON.parse(historyData2.toString());
-// const historyP3 = JSON.parse(historyData3.toString());
 describe('updatePackageJson', () => {
     it('update majorVersion', async () => {
         let historyP = await saveHistory();
