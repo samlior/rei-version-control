@@ -71,7 +71,7 @@ async function deletePackageJson() {
 async function createPackageJson() {
     for (let i = 0; i < createP.packages.length; i++) {
         const currentPath = packagePath + 'test' + i
-        let p = createP.packages[i];
+        const p = createP.packages[i];
         const str = JSON.stringify(p, null, '\t');
         await fsp.writeFile(currentPath + path.sep + 'package.json', str);
     }
